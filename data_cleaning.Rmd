@@ -1,0 +1,109 @@
+---
+title: "Data Cleaning and Preprocessing"
+author: "Zach Weber"
+date: "March 27, 2019"
+output: 
+  pdf_document: 
+    number_sections: yes
+    toc: yes
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Purpose
+To prepare our training data for model creation through pruning and feature engineering.
+
+# Loading in Libraries and Data
+
+First, lets load in some libraries that may be useful for our purposes
+```{r, results='hide', message=FALSE, warning=FALSE}
+library(dplyr, quietly=TRUE)
+library(ggplot2, quietly=TRUE)
+```
+
+Next we can load in our training data 
+```{r}
+# generate path to training data
+data.dir <- "datasets/"
+train.fpath <- paste0(data.dir,"train.csv")
+
+# load in training data
+train.dat <- read.table(train.fpath, sep=",", header=TRUE)
+```
+
+# Exploring Features
+Lets take a look at what features we have. We know that our goal is to predict the price of the home which is encoded in the "SalePrice" variable, but what predictors do we have acceess to and what type of variable are they?
+
+```{r}
+# get the number of predictors 
+length(colnames(train.dat))-1 # columns minus SalePrice
+
+# get the colnames of the predictors
+featnames <- colnames(train.dat)[which(colnames(train.dat)!="SalePrice")]
+featnames
+```
+
+It might be helpful to see which predictors are continuous and which predictors are categorical in this list. We can get a rough split by querying the data type of the column
+```{r}
+# split features into numeric and categorical (roughly)
+numericFeats <- featnames[unlist(lapply(train.dat[,featnames], is.numeric))] 
+categoricalFeats <- featnames[!featnames %in% numericFeats]
+
+# display numeric features 
+numericFeats
+
+# display categorical features
+categoricalFeats
+```
+
+
+## Pruning Predictors
+We also should be interested in which features have missing data in both the numeric and categorical
+type. Because missing data imputation is not totally within the scope of this class we would probably
+remove all sets of predictors with missing data. We can start by generating filters for columns 
+with missing data.
+```{r}
+# generate filters for missing data
+num.NA.filt <- unlist(lapply(train.dat[,numericFeats],
+                             function(x) any(is.na(x))))
+cat.NA.filt <- unlist(lapply(train.dat[,categoricalFeats],
+                             function(x) any(is.na(x))))
+```
+
+Lets summarize the findings when we apply the filter (print statements not shown)
+```{r, echo=FALSE}
+# number numeric features without NAs + list of vars with NA
+cat(sprintf("Number of Numeric Features: %i\n", length(numericFeats)))
+cat(sprintf("Number of Numeric Features w/o NAs: %i\n", 
+             length(numericFeats[!num.NA.filt])))
+cat("Features with NAs: ", numericFeats[num.NA.filt], "\n")
+
+# number of categorical features without NAs + list of vars with NA 
+cat(sprintf("Number of Categorical Features: %i\n", length(numericFeats)))
+cat(sprintf("number of Categorical Features w/o NAs: %i\n",
+            length(categoricalFeats[!cat.NA.filt])))
+cat("Features with NAs\n: ")
+categoricalFeats[cat.NA.filt]
+
+
+
+```
+
+Now that we've identified those features with missing data, we can remove them from the data frame
+to produce a new pruned dataset. We should have 34 + 27 = 61 features remaining on which to predict.
+
+```{r}
+# get the column names to be removed
+numeric.to.remove <- numericFeats[num.NA.filt]
+categor.to.remove <- numericFeats[cat.NA.filt]
+pruned.data <- train.dat[,!colnames(train.dat) %in% c(numeric.to.remove,categor.to.remove)]
+dim(pruned.data)
+```
+
+
+
+
