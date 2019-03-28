@@ -83,10 +83,10 @@ cat(sprintf("Number of Numeric Features w/o NAs: %i\n",
 cat("Features with NAs: ", numericFeats[num.NA.filt], "\n")
 
 # number of categorical features without NAs + list of vars with NA 
-cat(sprintf("Number of Categorical Features: %i\n", length(numericFeats)))
+cat(sprintf("Number of Categorical Features: %i\n", length(categoricalFeats)))
 cat(sprintf("number of Categorical Features w/o NAs: %i\n",
             length(categoricalFeats[!cat.NA.filt])))
-cat("Features with NAs\n: ")
+cat("Features with NAs:\n")
 categoricalFeats[cat.NA.filt]
 
 
@@ -94,16 +94,36 @@ categoricalFeats[cat.NA.filt]
 ```
 
 Now that we've identified those features with missing data, we can remove them from the data frame
-to produce a new pruned dataset. We should have 34 + 27 = 61 features remaining on which to predict.
+to produce a new pruned dataset. We should have 34 + 27 = 61 features remaining on which to predict. The total number of columns should be 61 + 1 =62 for the features and the _SalePrice_ variable
 
 ```{r}
 # get the column names to be removed
-numeric.to.remove <- numericFeats[num.NA.filt]
-categor.to.remove <- numericFeats[cat.NA.filt]
-pruned.data <- train.dat[,!colnames(train.dat) %in% c(numeric.to.remove,categor.to.remove)]
+columns.to.keep <- c(categoricalFeats[!cat.NA.filt],
+                     numericFeats[!num.NA.filt],
+                     "SalePrice")
+pruned.data <- train.dat[,columns.to.keep]
 dim(pruned.data)
 ```
 
+Everything here looks good. We wont directly create dummy variables here since R handles factors pretty intuitively. 
+
+## Saving Our Pruned Data
+
+We're going to save our pruned data table in two different formats. We'll save it first as a __.csv__ file and then we'll also save it as a __.rda__ file for easier reading.
+
+```{r}
+file.prefix <- "pruned_data"
+
+# save as .csv
+write.table(x=pruned.data,
+            file=paste(data.dir,file.prefix,".csv"),
+            sep=",",
+            row.names=FALSE,
+            quote=FALSE)
+
+# save as .rda
+save(x=pruned.data, file=paste0(data.dir, file.prefix, ".rda"))
+```
 
 
 
