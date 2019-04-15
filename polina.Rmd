@@ -1,7 +1,5 @@
 ---
-title: "Data Cleaning and Preprocessing"
-author: "Zach Weber"
-date: "March 27, 2019"
+title: "EDA"
 output: 
   pdf_document: 
     number_sections: yes
@@ -14,116 +12,22 @@ editor_options:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-# Purpose
-To prepare our training data for model creation through pruning and feature engineering.
-
-# Loading in Libraries and Data
-
-First, lets load in some libraries that may be useful for our purposes
-```{r, results='hide', message=FALSE, warning=FALSE}
-library(dplyr, quietly=TRUE)
-library(ggplot2, quietly=TRUE)
+```{r, message=FALSE, warning=FALSE}
+library(dplyr)
+library(ggplot2)
+library(DataExplorer)
 ```
 
-Next we can load in our training data 
+Exploratory data analysis. There are 62 variables. Approximately half of them are categorical, and the other half is of integer values. The histograms show that the variables follow different distributions, often skewed and/or bimodal.
 ```{r}
-# generate path to training data
-data.dir <- "datasets/"
-train.fpath <- paste0(data.dir,"train.csv")
-
-# load in training data
-train.dat <- read.table(train.fpath, sep=",", header=TRUE)
+train <- read.table("/Users/polina/Projects/house-prices-regression/datasets/pruned_data.csv", sep=",", header=TRUE)
+plot_str(train)
+plot_histogram(train)
 ```
 
-# Exploring Features
-Lets take a look at what features we have. We know that our goal is to predict the price of the home which is encoded in the "SalePrice" variable, but what predictors do we have acceess to and what type of variable are they?
-
+Multivariate analysis. The correlation plot shows that variables such as OverallQual, GrLivArea, FullBath, TotRmsAbvGrd, GarageArea, GarageCars, and SalePrice are more strongly positively correlated with other variables, while EnclosedPorch is the only one that is overall negatively correlated.
 ```{r}
-# get the number of predictors 
-length(colnames(train.dat))-1 # columns minus SalePrice
-
-# get the colnames of the predictors
-featnames <- colnames(train.dat)[which(colnames(train.dat)!="SalePrice")]
-featnames
+plot_correlation(train, type = 'continuous','Review.Date')
 ```
-
-It might be helpful to see which predictors are continuous and which predictors are categorical in this list. We can get a rough split by querying the data type of the column
-```{r}
-# split features into numeric and categorical (roughly)
-numericFeats <- featnames[unlist(lapply(train.dat[,featnames], is.numeric))] 
-categoricalFeats <- featnames[!featnames %in% numericFeats]
-
-# display numeric features 
-numericFeats
-
-# display categorical features
-categoricalFeats
-```
-
-
-## Pruning Predictors
-We also should be interested in which features have missing data in both the numeric and categorical
-type. Because missing data imputation is not totally within the scope of this class we would probably
-remove all sets of predictors with missing data. We can start by generating filters for columns 
-with missing data.
-```{r}
-# generate filters for missing data
-num.NA.filt <- unlist(lapply(train.dat[,numericFeats],
-                             function(x) any(is.na(x))))
-cat.NA.filt <- unlist(lapply(train.dat[,categoricalFeats],
-                             function(x) any(is.na(x))))
-```
-
-Lets summarize the findings when we apply the filter (print statements not shown)
-```{r, echo=FALSE}
-# number numeric features without NAs + list of vars with NA
-cat(sprintf("Number of Numeric Features: %i\n", length(numericFeats)))
-cat(sprintf("Number of Numeric Features w/o NAs: %i\n", 
-             length(numericFeats[!num.NA.filt])))
-cat("Features with NAs: ", numericFeats[num.NA.filt], "\n")
-
-# number of categorical features without NAs + list of vars with NA 
-cat(sprintf("Number of Categorical Features: %i\n", length(categoricalFeats)))
-cat(sprintf("number of Categorical Features w/o NAs: %i\n",
-            length(categoricalFeats[!cat.NA.filt])))
-cat("Features with NAs:\n")
-categoricalFeats[cat.NA.filt]
-
-
-
-```
-
-Now that we've identified those features with missing data, we can remove them from the data frame
-to produce a new pruned dataset. We should have 34 + 27 = 61 features remaining on which to predict. The total number of columns should be 61 + 1 =62 for the features and the _SalePrice_ variable
-
-```{r}
-# get the column names to be removed
-columns.to.keep <- c(categoricalFeats[!cat.NA.filt],
-                     numericFeats[!num.NA.filt],
-                     "SalePrice")
-pruned.data <- train.dat[,columns.to.keep]
-dim(pruned.data)
-```
-
-Everything here looks good. We wont directly create dummy variables here since R handles factors pretty intuitively. 
-
-## Saving Our Pruned Data
-
-We're going to save our pruned data table in two different formats. We'll save it first as a __.csv__ file and then we'll also save it as a __.rda__ file for easier reading.
-
-```{r}
-file.prefix <- "pruned_data"
-
-# save as .csv
-write.table(x=pruned.data,
-            file=paste(data.dir,file.prefix,".csv"),
-            sep=",",
-            row.names=FALSE,
-            quote=FALSE)
-
-# save as .rda
-save(x=pruned.data, file=paste0(data.dir, file.prefix, ".rda"))
-```
-
 
 
